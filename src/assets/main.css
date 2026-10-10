@@ -1,0 +1,69 @@
+:root {
+  --bg: #ffffff;
+  --text: #1f2933;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+
+  /* Couleurs des niveaux : toujours à doubler d'un texte, jamais seules */
+  --ok: #15803d;
+  --level-debug: #6b7280;
+  --level-info: #2563eb;
+  --level-warning: #b45309;
+  --level-error: #dc2626;
+  --level-critical: #7f1d1d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111827;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --border: #374151;
+
+    --ok: #4ade80;
+    --level-debug: #9ca3af;
+    --level-info: #60a5fa;
+    --level-warning: #fbbf24;
+    --level-error: #f87171;
+    --level-critical: #fca5a5;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  line-height: 1.5;
+}
+
+#app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+input,
+select,
+button {
+  font: inherit;
+  padding: 0.35em 0.7em;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+}
+button {
+  cursor: pointer;
+}

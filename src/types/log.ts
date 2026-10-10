@@ -1,4 +1,5 @@
-export type Level = 'debug' | 'info' | 'warning' | 'error' | 'critical'
+export const LEVELS = ['debug', 'info', 'warning', 'error', 'critical'] as const
+export type Level = (typeof LEVELS)[number]
 
 export interface Log {
   id: string
