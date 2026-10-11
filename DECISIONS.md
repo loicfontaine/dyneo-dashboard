@@ -25,3 +25,8 @@
   (mesuré : l'API peut répondre 200 puis fermer aussitôt), bouton « Réessayer maintenant ».
 - **tail adapté à la durée d'absence** (min 200, max 5000), pessimiste à 20 logs/s ; les doublons
   sont écartés grâce aux id stables. Au-delà de ~6 min d'absence, des logs peuvent manquer.
+
+### Design
+
+- **Statut HTTP en neutre** : mesuré, ~40 % des logs ont un 4xx/5xx quel que soit leur niveau
+  (même « critical » avec 200). Colorer le statut créerait de fausses alertes.

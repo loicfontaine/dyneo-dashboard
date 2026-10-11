@@ -1,29 +1,18 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { ref, watch, shallowRef } from 'vue'
 import { useLogStream } from './composables/useLogStream'
-import { usePausable } from './composables/usePausable'
-import { filterLogs } from './utils/filterLogs'
-import { LEVELS, type Level } from './types/log'
+import type { Level, Log } from './types/log'
 import StatusBar from './components/StatusBar.vue'
-import LevelFilter from './components/LevelFilter.vue'
-import LogToolbar from './components/LogToolbar.vue'
-import LogTable from './components/LogTable.vue'
+import OverviewPanel from './components/OverviewPanel.vue'
+import LogsPanel from './components/LogsPanel.vue'
+
 import '@/assets/main.css'
 
 const API_URL = import.meta.env.VITE_API_URL
-const MAX_VISIBLE = 100
 
 // Le paramètre tail est ajouté par le composable (et adapté après une coupure)
 const { logs, status, ignored, ratePerSecond, silenceSeconds, retryIn, reconnectNow } =
   useLogStream({ url: `${API_URL}/logs/stream?life=0` })
-
-// Les compteurs portent sur le flux en direct : ils continuent pendant la pause
-// et ne dépendent pas des filtres.
-const counts = computed(() => {
-  const result = Object.fromEntries(LEVELS.map((l) => [l, 0])) as Record<Level, number>
-  for (const log of logs.value) result[log.level]++
-  return result
-})
 
 // Liste des services (non documentée par l'API) construite depuis les données.
 // Elle ne change que lorsqu'un nouveau service apparaît : le menu n'est pas redessiné
@@ -36,72 +25,106 @@ watch(logs, (list) => {
   if (known.size !== before) services.value = [...known].sort()
 })
 
-const levels = ref<Level[]>([...LEVELS])
+// Onglets, reflétés dans l'URL (#logs) : le bouton Retour et les liens fonctionnent
+type Tab = 'overview' | 'logs'
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'overview', label: "Vue d'ensemble" },
+  { id: 'logs', label: 'Tous les logs' },
+]
+const tabFromUrl = (): Tab => (location.hash === '#logs' ? 'logs' : 'overview')
+const tab = ref<Tab>(tabFromUrl())
+const tabButtons = ref<HTMLButtonElement[]>([])
+
+function openTab(next: Tab) {
+  if (next === tab.value) return
+  tab.value = next
+  history.pushState(null, '', next === 'logs' ? '#logs' : location.pathname + location.search)
+  window.scrollTo({ top: 0 })
+}
+
+// Filtres de la liste : gardés ici pour que la vue d'ensemble puisse les régler.
+// Aucun niveau choisi = tous les niveaux affichés.
+const levels = ref<Level[]>([])
 const service = ref('')
 const search = ref('')
 
-const { displayed, paused, missed, toggle } = usePausable(logs)
-
-const filtered = computed(() =>
-  filterLogs(displayed.value, {
-    levels: levels.value,
-    service: service.value,
-    search: search.value,
-  }),
-)
-const visible = computed(() => filtered.value.slice(0, MAX_VISIBLE))
-
-function resetFilters() {
-  levels.value = [...LEVELS]
-  service.value = ''
-  search.value = ''
-}
+const selected = shallowRef<Log | null>(null)
 </script>
 
 <template>
   <h1>Logs</h1>
-
   <StatusBar
     :status="status"
     :rate="ratePerSecond"
     :silence="silenceSeconds"
     :retry-in="retryIn"
-    :total="logs.length"
     :ignored="ignored"
     @reconnect="reconnectNow"
   />
 
-  <LevelFilter v-model="levels" :counts="counts" />
-
-  <LogToolbar
-    v-model:search="search"
-    v-model:service="service"
-    :services="services"
-    :paused="paused"
-    @toggle="toggle"
-  />
-
-  <p class="note">
-    {{ filtered.length }} logs correspondent · {{ visible.length }} affichés
-    <template v-if="paused"> · en pause : {{ missed }} nouveaux logs depuis la pause</template>
-  </p>
-
-  <LogTable v-if="visible.length" :logs="visible" />
-  <p v-else-if="logs.length === 0" class="empty">En attente des premiers logs…</p>
-  <p v-else class="empty">
-    Aucun log ne correspond aux filtres.
-    <button type="button" @click="resetFilters">Réinitialiser les filtres</button>
-  </p>
+  <div class="tabs" role="tablist" aria-label="Vues">
+    <button
+      v-for="t in TABS"
+      :id="`tab-${t.id}`"
+      ref="tabButtons"
+      :key="t.id"
+      type="button"
+      role="tab"
+      :aria-selected="tab === t.id"
+      :aria-controls="`panel-${t.id}`"
+      :tabindex="tab === t.id ? 0 : -1"
+      @click="openTab(t.id)"
+    >
+      {{ t.label }}
+    </button>
+  </div>
+  <main :id="`panel-${tab}`" role="tabpanel" :aria-labelledby="`tab-${tab}`">
+    <OverviewPanel v-if="tab === 'overview'" />
+    <LogsPanel
+      v-else
+      v-model:levels="levels"
+      v-model:service="service"
+      v-model:search="search"
+      :logs="logs"
+      :services="services"
+      :selected-id="selected?.id"
+      @select="selected = $event"
+    />
+  </main>
 </template>
 
 <style scoped>
-.note {
-  color: var(--muted);
-  font-size: 0.9rem;
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1.5rem;
 }
-.empty {
-  padding: 2rem;
-  text-align: center;
+h1 {
+  margin: 0;
+}
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 1.25rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.tabs button {
+  margin-bottom: -1px;
+  padding: 0.5em 1em;
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
   color: var(--muted);
+  font-weight: 600;
+}
+.tabs button[aria-selected='true'] {
+  color: var(--text);
+  border-bottom-color: var(--level-info);
+}
+.tabs button:focus-visible {
+  outline: 2px solid var(--level-info);
+  outline-offset: -2px;
 }
 </style>

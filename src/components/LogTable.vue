@@ -1,14 +1,51 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { Log } from '../types/log'
 import LevelBadge from './LevelBadge.vue'
 import { formatDuration, formatTime, describeStatus } from '../utils/format'
 
-defineProps<{ logs: Log[] }>()
+defineProps<{
+  logs: Log[]
+  selectedId?: string
+  /** zone de défilement propre (liste complète) ; sinon la table suit la page */
+  scrollable?: boolean
+}>()
+const emit = defineEmits<{
+  /** true quand l'utilisateur a quitté le haut de la liste, false quand il y revient */
+  scrolled: [away: boolean]
+  select: [log: Log]
+}>()
+
+// Les nouveaux logs arrivent en haut : au-delà de ce seuil, on considère que l'utilisateur lit
+const AWAY_PX = 40
+
+const wrap = ref<HTMLElement>()
+let away = false
+
+function onScroll() {
+  const top = wrap.value?.scrollTop ?? 0
+  const now = away ? top > 0 : top > AWAY_PX
+  if (now !== away) {
+    away = now
+    emit('scrolled', away)
+  }
+}
+
+function scrollToTop() {
+  wrap.value?.scrollTo({ top: 0 })
+}
+defineExpose({ scrollToTop })
+
+function onRowKey(event: KeyboardEvent, log: Log) {
+  if (event.key !== 'Enter' && event.key !== ' ') return
+  event.preventDefault()
+  emit('select', log)
+}
 </script>
 
 <template>
-  <div class="wrap">
-    <table>
+  <div ref="wrap" class="wrap" :class="{ scrollable }" @scroll.passive="onScroll">
+    <table aria-label="Logs (Entrée ou clic sur une ligne pour le détail)">
       <thead>
         <tr>
           <th>Heure</th>
@@ -20,7 +57,14 @@ defineProps<{ logs: Log[] }>()
         </tr>
       </thead>
       <tbody>
-        <tr v-for="log in logs" :key="log.id" :class="`level-${log.level}`">
+        <tr
+          v-for="log in logs"
+          :key="log.id"
+          :class="[`level-${log.level}`, { selected: log.id === selectedId }]"
+          tabindex="0"
+          @click="emit('select', log)"
+          @keydown="onRowKey($event, log)"
+        >
           <td class="time">{{ formatTime(log.timestamp) }}</td>
           <td><LevelBadge :level="log.level" /></td>
           <td>{{ log.service }}</td>
@@ -34,12 +78,17 @@ defineProps<{ logs: Log[] }>()
         </tr>
       </tbody>
     </table>
+    <div v-if="$slots.footer" class="footer">
+      <slot name="footer" />
+    </div>
   </div>
 </template>
 
 <style scoped>
 .wrap {
-  overflow-x: auto;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
 }
 table {
   width: 100%;
@@ -47,6 +96,10 @@ table {
   font-size: 0.9rem;
 }
 th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg);
   text-align: left;
   color: var(--muted);
   font-weight: 600;
@@ -78,6 +131,27 @@ td:first-child {
   border-radius: 4px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+.wrap.scrollable {
+  max-height: 70vh;
+}
+.footer {
+  padding: 0.75rem;
+  text-align: center;
+}
+tbody tr {
+  cursor: pointer;
+}
+tbody tr:hover td {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+tbody tr:focus-visible {
+  outline: 2px solid var(--level-info);
+  outline-offset: -2px;
+}
+tr.selected td {
+  background: color-mix(in srgb, var(--level-info) 12%, transparent);
 }
 
 /* --c : couleur de la barre à gauche de chaque ligne */

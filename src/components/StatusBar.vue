@@ -7,7 +7,6 @@ const props = defineProps<{
   rate: number
   silence: number | null
   retryIn: number | null
-  total: number
   ignored: number
 }>()
 const emit = defineEmits<{ reconnect: [] }>()
@@ -39,7 +38,6 @@ const quiet = computed(
       <button type="button" class="retry" @click="emit('reconnect')">Réessayer maintenant</button>
     </span>
     <span>{{ rate.toFixed(1) }} logs/s <small>(moyenne sur 10 s)</small></span>
-    <span>{{ total }} logs en mémoire</span>
     <span v-if="ignored > 0">{{ ignored }} lignes illisibles ignorées</span>
     <strong v-if="quiet">Aucun log reçu depuis {{ silence }} s</strong>
     <span v-else-if="status !== 'connecté' && silence !== null">
@@ -57,8 +55,18 @@ const quiet = computed(
   color: var(--muted);
   font-size: 0.9rem;
 }
-.pill { font-weight: 600; }
-.pill.connecté { color: var(--ok); }
-.retry { margin-left: 0.5rem; font-size: 0.85rem; padding: 0.15em 0.6em; }
-small { opacity: 0.8; }
+.pill {
+  font-weight: 600;
+}
+.pill.connecté {
+  color: var(--ok);
+}
+.retry {
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+  padding: 0.15em 0.6em;
+}
+small {
+  opacity: 0.8;
+}
 </style>
