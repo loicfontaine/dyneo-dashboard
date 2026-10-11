@@ -1,22 +1,27 @@
 <script setup lang="ts">
-import { ref, watch, shallowRef } from 'vue'
+import { ref, watch, shallowRef, computed } from 'vue'
 import { useLogStream } from './composables/useLogStream'
-import type { Level, Log } from './types/log'
+import { isIssue, lastWindow, type IssueGroup } from './utils/stats'
+import { LEVELS, type Level, type Log } from './types/log'
 import StatusBar from './components/StatusBar.vue'
-import OverviewPanel from './components/OverviewPanel.vue'
-import LogsPanel from './components/LogsPanel.vue'
+import OverviewPanel from './components/overview/OverviewPanel.vue'
+import LogsPanel from './components/logs/LogsPanel.vue'
+import LogDetail from './components/LogDetail.vue'
 
 import '@/assets/main.css'
 
 const API_URL = import.meta.env.VITE_API_URL
+const WINDOW_MS = 5 * 60_000 // la vue d'ensemble porte sur les 5 dernières minutes
 
 // Le paramètre tail est ajouté par le composable (et adapté après une coupure)
 const { logs, status, ignored, ratePerSecond, silenceSeconds, retryIn, reconnectNow } =
-  useLogStream({ url: `${API_URL}/logs/stream?life=0` })
+  useLogStream({ url: `${API_URL}/logs/stream?life=0`, tail: 4000, max: 10_000 })
+
+const windowLogs = computed(() => lastWindow(logs.value, WINDOW_MS))
 
 // Liste des services (non documentée par l'API) construite depuis les données.
 // Elle ne change que lorsqu'un nouveau service apparaît : le menu n'est pas redessiné
-// à chaque mise à jour du flux.
+// à chaque mise à jour du flux.§
 const services = ref<string[]>([])
 watch(logs, (list) => {
   const known = new Set(services.value)
@@ -40,6 +45,21 @@ function openTab(next: Tab) {
   tab.value = next
   history.pushState(null, '', next === 'logs' ? '#logs' : location.pathname + location.search)
   window.scrollTo({ top: 0 })
+}
+
+function showGroup(group: IssueGroup) {
+  levels.value = [group.level]
+  service.value = ''
+  search.value = group.message
+  openTab('logs')
+}
+
+// Service le plus touché : ses problèmes uniquement
+function showService(name: string) {
+  levels.value = LEVELS.filter(isIssue)
+  service.value = name
+  search.value = ''
+  openTab('logs')
 }
 
 // Filtres de la liste : gardés ici pour que la vue d'ensemble puisse les régler.
@@ -79,7 +99,16 @@ const selected = shallowRef<Log | null>(null)
     </button>
   </div>
   <main :id="`panel-${tab}`" role="tabpanel" :aria-labelledby="`tab-${tab}`">
-    <OverviewPanel v-if="tab === 'overview'" />
+    <OverviewPanel
+      v-if="tab === 'overview'"
+      :logs="windowLogs"
+      :window-ms="WINDOW_MS"
+      :selected-id="selected?.id"
+      @show-group="showGroup"
+      @show-service="showService"
+      @show-all="openTab('logs')"
+      @select="selected = $event"
+    />
     <LogsPanel
       v-else
       v-model:levels="levels"
@@ -91,6 +120,7 @@ const selected = shallowRef<Log | null>(null)
       @select="selected = $event"
     />
   </main>
+  <LogDetail v-if="selected" :log="selected" @close="selected = null" />
 </template>
 
 <style scoped>

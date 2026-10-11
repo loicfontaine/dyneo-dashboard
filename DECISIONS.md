@@ -25,6 +25,25 @@
   (mesuré : l'API peut répondre 200 puis fermer aussitôt), bouton « Réessayer maintenant ».
 - **tail adapté à la durée d'absence** (min 200, max 5000), pessimiste à 20 logs/s ; les doublons
   sont écartés grâce aux id stables. Au-delà de ~6 min d'absence, des logs peuvent manquer.
+- **Heure locale avec millisecondes** : les timestamps sont en UTC, plusieurs logs partagent la même seconde.
+
+### Overview
+
+### Vue d'ensemble (bonnes pratiques des dashboards de logs)
+
+- **Onglets plutôt qu'une longue page** : « Vue d'ensemble » répond à « tout va bien en ce
+  moment ? » (indicateurs, répartition, volume, problèmes principaux, 10 derniers logs) ;
+  « Problèmes » liste tous les problèmes ; « Tous les logs » sert à chercher (filtres, pause, liste
+  complète). Un nombre n'apparaît qu'une fois par vue. L'onglet est
+  dans l'URL (`#problemes`, `#logs`)
+- **Vue d'ensemble sur une fenêtre fixe : les 5 dernières minutes**, mesurées par rapport au log le plus récent. Avec une durée fixe, les chiffres bougent et se comparent d'un moment à l'autre.
+- **Derniers logs de la vue d'ensemble échantillonnés, jamais les erreurs** : 10 lignes à ~13 logs/s
+  défilaient trop vite pour être lues (~10 nouvelles lignes par seconde). On garde toutes les erreurs
+  et critiques, et un seul log des autres niveaux par créneau de 5 s. Échantillonnage par créneau de
+  temps plutôt qu'aléatoire : un tirage au hasard changerait à chaque mise à jour. Dans chaque créneau
+  on garde le plus ancien, qui ne change plus quand d'autres logs arrivent : aucune ligne ne disparaît
+  après coup (mesuré). Résultat mesuré : ~1,5 nouvelle ligne par seconde, presque toutes des erreurs
+  (à elles seules ~1,3/s, soit 12 % du flux). La liste complète reste dans « Tous les logs ».
 
 ### Design
 

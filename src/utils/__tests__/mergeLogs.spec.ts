@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mergeLogs } from '../utils/mergeLogs'
+import { mergeLogs } from '../../utils/mergeLogs'
 import type { Log } from '../../types/log'
 
 const log = (id: string): Log => ({
