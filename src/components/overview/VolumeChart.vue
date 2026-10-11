@@ -208,14 +208,7 @@ figcaption {
 .volume {
   height: 120px;
 }
-.rate {
-  height: 60px;
-}
-.subtitle {
-  grid-column: 1 / -1;
-  margin: 0.75rem 0 0.25rem;
-  font-size: 0.85rem;
-}
+
 .axis-y {
   display: flex;
   flex-direction: column;
@@ -259,11 +252,6 @@ figcaption {
   stroke: var(--level-error);
   stroke-width: 2;
   stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
-.crosshair {
-  stroke: var(--muted);
-  stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
 .tooltip {

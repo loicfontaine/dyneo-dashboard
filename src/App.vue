@@ -21,7 +21,7 @@ const windowLogs = computed(() => lastWindow(logs.value, WINDOW_MS))
 
 // Liste des services (non documentée par l'API) construite depuis les données.
 // Elle ne change que lorsqu'un nouveau service apparaît : le menu n'est pas redessiné
-// à chaque mise à jour du flux.§
+// à chaque mise à jour du flux.
 const services = ref<string[]>([])
 watch(logs, (list) => {
   const known = new Set(services.value)
@@ -38,7 +38,6 @@ const TABS: { id: Tab; label: string }[] = [
 ]
 const tabFromUrl = (): Tab => (location.hash === '#logs' ? 'logs' : 'overview')
 const tab = ref<Tab>(tabFromUrl())
-const tabButtons = ref<HTMLButtonElement[]>([])
 
 function openTab(next: Tab) {
   if (next === tab.value) return
@@ -124,12 +123,6 @@ const selected = shallowRef<Log | null>(null)
 </template>
 
 <style scoped>
-.top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.5rem 1.5rem;
-}
 h1 {
   margin: 0;
 }

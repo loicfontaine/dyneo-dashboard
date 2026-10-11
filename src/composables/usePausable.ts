@@ -29,10 +29,5 @@ export function usePausable<T extends { id: string }>(source: Ref<T[]>) {
     pausedBy.value = null
   }
 
-  function toggle() {
-    if (paused.value) resume()
-    else pause('user')
-  }
-
-  return { displayed, paused, pausedBy, missed, pause, resume, toggle }
+  return { displayed, paused, pausedBy, missed, pause, resume }
 }

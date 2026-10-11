@@ -1,54 +1,81 @@
-# dyneo-dashboard
+# Dyneo · Logs
 
-This template should help get you started developing with Vue 3 in Vite.
+Interface web qui permet à un technicien de suivre des logs en direct et de comprendre rapidement
+si tout va bien, sans lire de JSON. Vue 3, TypeScript, Vite.
 
-## Recommended IDE Setup
+- **Vue d'ensemble** : répartition par niveau, indicateurs de problèmes (taux et tendance, nombre,
+  service le plus touché, utilisateurs touchés), volume dans le temps, problèmes principaux, derniers logs.
+- **Problèmes** : tous les problèmes regroupés par message, avec recherche.
+- **Tous les logs** : liste en direct, filtres (niveau, service, texte), pause, détail d'un log.
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Lancer le projet
 
-## Recommended Browser Setup
+Prérequis : Node.js 22.18+ ou 24.12+, et une API qui expose le flux `GET /logs/stream` (SSE).
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+1. Installer les dépendances :
 
-## Type Support for `.vue` Imports in TS
+   ```bash
+   npm install
+   ```
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+2. Indiquer l'adresse de l'API dans la variable `VITE_API_URL`. Copier le modèle fourni, puis
+   renseigner l'adresse dans `.env.local` (fichier ignoré par Git) :
 
-## Customize configuration
+   ```bash
+   cp .env.example .env.local
+   ```
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+   ```dotenv
+   VITE_API_URL=https://technical-exercise.dyneo.io
+   ```
 
-## Project Setup
+   Sans cette variable, l'application ne peut pas joindre l'API et reste sur « Reconnexion… ».
 
-```sh
-npm install
-```
+3. Lancer le serveur de développement :
 
-### Compile and Hot-Reload for Development
+   ```bash
+   npm run dev
+   ```
 
-```sh
-npm run dev
-```
+L'application s'ouvre sur http://localhost:5173.
 
-### Type-Check, Compile and Minify for Production
+| Commande            | Rôle                                            |
+| ------------------- | ----------------------------------------------- |
+| `npm run test:unit` | Tests unitaires (Vitest)                        |
+| `npm run build`     | Vérification des types puis build de production |
+| `npm run lint`      | ESLint et oxlint, avec correction automatique   |
 
-```sh
-npm run build
-```
+## Choix principaux
 
-### Run Unit Tests with [Vitest](https://vitest.dev/)
+Le détail de chaque décision, avec ses raisons, est dans [DECISIONS.md](DECISIONS.md). En résumé :
 
-```sh
-npm run test:unit
-```
+- **SSE avec reconnexion gérée par l'application** (attente croissante, de 1 s à 30 s) : à la
+  reconnexion, l'historique manquant est redemandé avec `tail`, et les doublons sont écartés par `id`.
+- **Pas de Pinia ni de routeur** : un seul flux, partagé par un composable. Les onglets sont dans
+  l'URL (`#problemes`, `#logs`), donc le bouton Retour fonctionne.
+- **Filtrage côté navigateur** : instantané, sans reconnexion, plusieurs niveaux à la fois.
+- **Vue d'ensemble sur les 5 dernières minutes**, mesurées depuis le log le plus récent : les
+  chiffres évoluent au lieu de saturer avec la mémoire.
+- **« Problèmes » = niveaux Erreur + Critique**, jamais le statut HTTP : sur l'API de test, il ne
+  reflétait pas la gravité.
+- **Lisibilité d'un flux rapide** : mises à jour regroupées toutes les 100 ms, pause automatique
+  quand on fait défiler la liste, derniers logs de la vue d'ensemble échantillonnés (toutes les
+  erreurs gardées).
+- **Accessibilité** : niveau indiqué par couleur, texte et symbole ; contrastes ; thème sombre.
+- **Calculs en fonctions pures testées** (`src/utils`), séparés des composants.
 
-### Lint with [ESLint](https://eslint.org/)
+## Compromis
 
-```sh
-npm run lint
-```
+- **Historique limité à la mémoire du navigateur** : 10 000 logs (~12 min). L'API n'a pas de
+  paramètre de date, seulement `tail` ; un rechargement redemande les 4 000 derniers logs.
+- **Tous les logs sont reçus**, même filtrés : coût réseau faible au rythme observé (~13 logs/s),
+  à revoir pour un flux beaucoup plus rapide.
+- **Liste par pages de 100 lignes**, sans virtualisation : suffisant aujourd'hui, à remplacer pour
+  de très longues listes.
+- **Composables du flux non testés** (`useLogStream`, `usePausable`) : ce serait la prochaine
+  étape, avec un faux `EventSource`.
+
+## Test utilisateur
+
+Un test avec un participant (test des 5 secondes, 6 tâches, questionnaire SUS) est décrit dans
+[TEST-UTILISATEUR.md](TEST-UTILISATEUR.md).
