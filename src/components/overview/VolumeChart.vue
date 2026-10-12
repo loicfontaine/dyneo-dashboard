@@ -247,13 +247,6 @@ figcaption {
 .hovered .other {
   opacity: 0.8;
 }
-.rate-line {
-  fill: none;
-  stroke: var(--level-error);
-  stroke-width: 2;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
 .tooltip {
   position: absolute;
   top: 0;

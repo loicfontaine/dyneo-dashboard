@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, shallowRef, computed } from 'vue'
+import { ref, watch, shallowRef, computed, onMounted, onUnmounted } from 'vue'
 import { useLogStream } from './composables/useLogStream'
 import { isIssue, lastWindow, type IssueGroup } from './utils/stats'
 import { LEVELS, type Level, type Log } from './types/log'
@@ -15,7 +15,7 @@ const WINDOW_MS = 5 * 60_000 // la vue d'ensemble porte sur les 5 dernières min
 
 // Le paramètre tail est ajouté par le composable (et adapté après une coupure)
 const { logs, status, ignored, ratePerSecond, silenceSeconds, retryIn, reconnectNow } =
-  useLogStream({ url: `${API_URL}/logs/stream?life=0`, tail: 4000, max: 10_000 })
+  useLogStream({ url: `${API_URL}/logs/stream`, tail: 4000, max: 10_000 })
 
 const windowLogs = computed(() => lastWindow(logs.value, WINDOW_MS))
 
@@ -36,6 +36,11 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: "Vue d'ensemble" },
   { id: 'logs', label: 'Tous les logs' },
 ]
+
+const onPopState = () => (tab.value = tabFromUrl())
+onMounted(() => window.addEventListener('popstate', onPopState))
+onUnmounted(() => window.removeEventListener('popstate', onPopState))
+
 const tabFromUrl = (): Tab => (location.hash === '#logs' ? 'logs' : 'overview')
 const tab = ref<Tab>(tabFromUrl())
 
@@ -85,7 +90,6 @@ const selected = shallowRef<Log | null>(null)
     <button
       v-for="t in TABS"
       :id="`tab-${t.id}`"
-      ref="tabButtons"
       :key="t.id"
       type="button"
       role="tab"

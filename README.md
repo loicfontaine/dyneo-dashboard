@@ -5,7 +5,6 @@ si tout va bien, sans lire de JSON. Vue 3, TypeScript, Vite.
 
 - **Vue d'ensemble** : répartition par niveau, indicateurs de problèmes (taux et tendance, nombre,
   service le plus touché, utilisateurs touchés), volume dans le temps, problèmes principaux, derniers logs.
-- **Problèmes** : tous les problèmes regroupés par message, avec recherche.
 - **Tous les logs** : liste en direct, filtres (niveau, service, texte), pause, détail d'un log.
 
 ## Lancer le projet
@@ -52,7 +51,7 @@ Le détail de chaque décision, avec ses raisons, est dans [DECISIONS.md](DECISI
 - **SSE avec reconnexion gérée par l'application** (attente croissante, de 1 s à 30 s) : à la
   reconnexion, l'historique manquant est redemandé avec `tail`, et les doublons sont écartés par `id`.
 - **Pas de Pinia ni de routeur** : un seul flux, partagé par un composable. Les onglets sont dans
-  l'URL (`#problemes`, `#logs`), donc le bouton Retour fonctionne.
+  l'URL (`#logs`), donc le bouton Retour fonctionne.
 - **Filtrage côté navigateur** : instantané, sans reconnexion, plusieurs niveaux à la fois.
 - **Vue d'ensemble sur les 5 dernières minutes**, mesurées depuis le log le plus récent : les
   chiffres évoluent au lieu de saturer avec la mémoire.
@@ -77,5 +76,5 @@ Le détail de chaque décision, avec ses raisons, est dans [DECISIONS.md](DECISI
 
 ## Test utilisateur
 
-Un test avec un participant (test des 5 secondes, 6 tâches, questionnaire SUS) est décrit dans
+Un test avec un participant (test des 5 secondes, 4 tâches, questionnaire SUS) est décrit dans
 [TEST-UTILISATEUR.md](TEST-UTILISATEUR.md).

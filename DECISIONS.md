@@ -13,10 +13,10 @@
   serveur (pas « ce niveau et au-dessus »), donc on ne pourrait pas choisir plusieurs niveaux avec
   une seule connexion ; côté client, c'est instantané, sans reconnexion, et les compteurs restent complets.
   Coût : on reçoit tous les logs (~13/s, quelques Ko/s).
-- **Pause = gel de l'affichage, pas de la connexion** : rien n'est perdu (tampon de 2000 logs,
-  environ 2 à 3 minutes), les compteurs continuent.
+- **Pause = gel de l'affichage, pas de la connexion** : rien n'est perdu (tampon de 10'000 logs,
+  environ 12 minutes au rythme moyen), les compteurs continuent.
 - **Rythme mesuré à l'arrivée, moyenne glissante sur 10 s** (le rythme réel varie de 0 à ~24/s par
-  vagues). L'historique rejoué à l'ouverture est ignoré pendant 1 s pour éviter un faux pic.
+  vagues). L'historique rejoué à l'ouverture est ignoré pendant 1.5 s pour éviter un faux pic.
 - **Détection de silence à 15 s, libellé neutre** : des silences de 1 à 2 s sont normaux (mesuré),
   et l'API n'envoie pas de keep-alive. Le vrai état de connexion vient de EventSource.
 - **Reconnexion gérée par l'application, pas par EventSource** : observé, après l'arrêt du serveur
@@ -26,24 +26,27 @@
 - **tail adapté à la durée d'absence** (min 200, max 5000), pessimiste à 20 logs/s ; les doublons
   sont écartés grâce aux id stables. Au-delà de ~6 min d'absence, des logs peuvent manquer.
 - **Heure locale avec millisecondes** : les timestamps sont en UTC, plusieurs logs partagent la même seconde.
-
-### Overview
+- **Lignes JSON illisibles ignorées et comptées** : une ligne du flux qui n'est pas du JSON valide est
+  écartée sans casser la liste. Le nombre de lignes ignorées s'affiche dans la barre d'état,
+  uniquement s'il est supérieur à zéro, pour ne pas encombrer l'écran en temps normal.
 
 ### Vue d'ensemble (bonnes pratiques des dashboards de logs)
 
 - **Onglets plutôt qu'une longue page** : « Vue d'ensemble » répond à « tout va bien en ce
   moment ? » (indicateurs, répartition, volume, problèmes principaux, 10 derniers logs) ;
-  « Problèmes » liste tous les problèmes ; « Tous les logs » sert à chercher (filtres, pause, liste
+  « Tous les logs » sert à chercher (filtres, pause, liste
   complète). Un nombre n'apparaît qu'une fois par vue. L'onglet est
-  dans l'URL (`#problemes`, `#logs`)
-- **Vue d'ensemble sur une fenêtre fixe : les 5 dernières minutes**, mesurées par rapport au log le plus récent. Avec une durée fixe, les chiffres bougent et se comparent d'un moment à l'autre.
-- **Derniers logs de la vue d'ensemble échantillonnés, jamais les erreurs** : 10 lignes à ~13 logs/s
-  défilaient trop vite pour être lues (~10 nouvelles lignes par seconde). On garde toutes les erreurs
-  et critiques, et un seul log des autres niveaux par créneau de 5 s. Échantillonnage par créneau de
-  temps plutôt qu'aléatoire : un tirage au hasard changerait à chaque mise à jour. Dans chaque créneau
-  on garde le plus ancien, qui ne change plus quand d'autres logs arrivent : aucune ligne ne disparaît
-  après coup (mesuré). Résultat mesuré : ~1,5 nouvelle ligne par seconde, presque toutes des erreurs
-  (à elles seules ~1,3/s, soit 12 % du flux). La liste complète reste dans « Tous les logs ».
+  dans l'URL (`#logs`)
+- **Vue d'ensemble sur une fenêtre fixe : les 5 dernières minutes**. Avec une durée fixe, les chiffres bougent et se comparent d'un moment à l'autre.
+- **Fenêtre mesurée par rapport au log le plus récent, pas à l'horloge du navigateur** : si l'horloge
+  du poste est décalée par rapport à celle du serveur, une fenêtre calée sur l'horloge locale
+  pourrait être vide ou tronquée. Contrepartie : après une coupure, la vue d'ensemble montre les
+  5 minutes qui précèdent le dernier log reçu ; la barre d'état indique alors depuis combien de
+  temps aucun log n'est arrivé.
+- **Tendance du taux de problèmes : dernière minute contre la minute précédente**, avec un seuil de
+  2 points : en dessous, la tendance est affichée comme « stable ». Sans seuil, la flèche changerait
+  à chaque petite variation. Pas de couleur d'alerte sur la tendance, le taux varie naturellement.
+- **Échantillonnage des logs dans la vue d’ensemble** : avec environ 13 logs par seconde, les 10 lignes affichées défilaient trop vite pour être lisibles. Pour ralentir le défilement, on conserve toutes les erreurs et les logs critiques, mais seulement un log des autres niveaux toutes les 5 secondes. On choisit le plus ancien log de chaque période afin que les lignes déjà affichées ne changent pas lorsque de nouveaux logs arrivent. La vue d’ensemble affiche ainsi environ 1,5 nouvelle ligne par seconde au lieu de 13. Tous les logs restent accessibles dans « Tous les logs ».
 
 ### Design
 
